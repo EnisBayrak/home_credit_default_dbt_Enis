@@ -1,0 +1,5 @@
+# dbt_utils provides the accepted_range test used in our schema files.
+# After cloning, run `dbt deps` once to download it.
+packages:
+  - package: dbt-labs/dbt_utils
+    version: [">=1.1.0", "<2.0.0"]
