@@ -1,3 +1,4 @@
+{{ config(materialized='view') }}
 SELECT
     SK_ID_CURR,
 
