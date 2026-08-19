@@ -1,0 +1,37 @@
+with installment_level as (
+
+    select
+        SK_ID_CURR,
+        SK_ID_PREV,
+        NUM_INSTALMENT_VERSION,
+        NUM_INSTALMENT_NUMBER,
+
+        MAX(DAYS_INSTALMENT) AS DAYS_INSTALMENT,
+        MAX(DAYS_ENTRY_PAYMENT) AS SON_ODEME_GUNU,
+        MAX(AMT_INSTALMENT) AS AMT_INSTALMENT,
+        SUM(AMT_PAYMENT) AS TOPLAM_ODENEN_TUTAR
+
+    from {{ ref('stg_installments_payments') }}
+
+    group by
+        SK_ID_CURR,
+        SK_ID_PREV,
+        NUM_INSTALMENT_VERSION,
+        NUM_INSTALMENT_NUMBER
+)
+
+select
+    SK_ID_CURR,
+    SK_ID_PREV,
+    NUM_INSTALMENT_VERSION,
+    NUM_INSTALMENT_NUMBER,
+    DAYS_INSTALMENT,
+    SON_ODEME_GUNU,
+    AMT_INSTALMENT,
+    TOPLAM_ODENEN_TUTAR,
+
+    SON_ODEME_GUNU - DAYS_INSTALMENT AS GECIKME_GUNU,
+
+    AMT_INSTALMENT - TOPLAM_ODENEN_TUTAR AS ODEME_FARKI
+
+from installment_level
