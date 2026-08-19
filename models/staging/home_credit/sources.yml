@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: home_credit_raw
+    database: home-credit-risk-grup3
+    schema: home_credit_risk_grup3
+    tables:
+      - name: application_train
+      - name: HomeCredit_columns_description
