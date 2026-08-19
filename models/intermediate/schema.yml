@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: int_application_train_features
+    columns:
+      - name: SK_ID_CURR
+        tests: [not_null, unique]
+      - name: TARGET
+        tests: [not_null]

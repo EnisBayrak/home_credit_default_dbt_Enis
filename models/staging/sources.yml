@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: raw_home_credit
+    database: home-credit-risk-grup3     # GCP Proje Adınız
+    schema: home_credit_risk_grup3       # BigQuery'deki ham veri dataseti
+    tables:
+      - name: POS_CASH_balance                # Temizleyeceğiniz 1. tablonun adı (örn: application_train)
+        description: "Ham birinci veri tablosu"
+      - name: previous_application               # Temizleyeceğiniz 2. tablonun adı (örn: bureau)
+        description: "Ham ikinci veri tablosu"
