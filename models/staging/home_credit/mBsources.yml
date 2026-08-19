@@ -1,6 +1,5 @@
 version: 2
 
-<<<<<<< HEAD
 # =============================================================================
 # sources.yml  --  DECLARING THE RAW DATA
 # -----------------------------------------------------------------------------
@@ -178,49 +177,6 @@ sources:
             tests:
               - not_null
 
-      - name: installments_payments
-        description: >
-          Payment-by-payment repayment history of previous credits: what was
-          due, what was actually paid, and when.
-          GRAIN: one row per instalment payment. 13,605,401 rows across only
-          997,752 distinct SK_ID_PREV -- roughly 13.6 payments per credit.
-          !! NO SINGLE-COLUMN UNIQUE KEY EXISTS HERE. We measured and did not
-          find one, so no `unique` test is declared. Writing one would produce a
-          permanently failing test on a perfectly healthy table.
-          If you need a key for joins, use the combination
-          (SK_ID_PREV, NUM_INSTALMENT_NUMBER, DAYS_ENTRY_PAYMENT) -- and verify
-          it yourself before relying on it.
-        columns:
-          - name: SK_ID_PREV
-            description: The previous credit this payment belongs to.
-            tests:
-              - not_null
-          - name: SK_ID_CURR
-            description: The client.
-            tests:
-              - not_null
-
-      - name: credit_card_balance
-        description: >
-          Monthly snapshots of credit-card balances on previous Home Credit
-          cards.
-          GRAIN: one row per SK_ID_PREV per month. Verified: 3,840,312 rows and
-          3,840,312 distinct (SK_ID_PREV, MONTHS_BALANCE) pairs -- the composite
-          key is clean.
-        columns:
-          - name: SK_ID_PREV
-            tests:
-              - not_null
-          - name: SK_ID_CURR
-            tests:
-              - not_null
-          - name: MONTHS_BALANCE
-            description: >
-              Month index relative to the application date. 0 is the most recent
-              month; the numbers run negative going back in time.
-            tests:
-              - not_null
-
       - name: POS_CASH_balance
         description: >
           Monthly snapshots of point-of-sale and cash loans.
@@ -268,12 +224,15 @@ sources:
           exists purely to show the required file format for the competition.
           Declared here only so its presence in the dataset is explained rather
           than mysterious. Do not model it.
-=======
-sources:
+
+  # ==========================================================
+  # Source declared by the application_train work stream.
+  # Same physical dataset, different source alias -- kept as-is
+  # because stg_application_train* models reference this name.
+  # ==========================================================
   - name: home_credit_raw
     database: home-credit-risk-grup3
     schema: home_credit_risk_grup3
     tables:
       - name: application_train
       - name: HomeCredit_columns_description
->>>>>>> ac6c83fcd61c3b8bf4b88cd99c988b6700f56835
