@@ -8,7 +8,7 @@ version: 2
 #
 # Three concrete payoffs for writing this file:
 #
-#   1. NO HARD-CODED PATHS. Models write {{ source('home_credit', 'bureau') }}
+#   1. NO HARD-CODED PATHS. Models write source('home_credit', 'bureau')
 #      instead of `home-credit-risk-grup3.home_credit_risk_grup3.bureau`.
 #      If the dataset is ever renamed, you change two lines here -- not fifty
 #      lines scattered across every model.
