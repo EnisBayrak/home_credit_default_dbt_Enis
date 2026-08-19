@@ -1,5 +1,6 @@
 version: 2
 
+<<<<<<< HEAD
 # =============================================================================
 # sources.yml  --  DECLARING THE RAW DATA
 # -----------------------------------------------------------------------------
@@ -267,3 +268,12 @@ sources:
           exists purely to show the required file format for the competition.
           Declared here only so its presence in the dataset is explained rather
           than mysterious. Do not model it.
+=======
+sources:
+  - name: home_credit_raw
+    database: home-credit-risk-grup3
+    schema: home_credit_risk_grup3
+    tables:
+      - name: application_train
+      - name: HomeCredit_columns_description
+>>>>>>> ac6c83fcd61c3b8bf4b88cd99c988b6700f56835

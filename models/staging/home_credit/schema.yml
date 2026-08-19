@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: stg_application_train_clean
+    columns:
+      - name: SK_ID_CURR
+        tests: [not_null, unique]
+      - name: TARGET
+        tests: [not_null]
