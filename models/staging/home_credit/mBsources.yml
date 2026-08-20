@@ -1,0 +1,238 @@
+version: 2
+
+# =============================================================================
+# sources.yml  --  DECLARING THE RAW DATA
+# -----------------------------------------------------------------------------
+# A "source" is dbt's way of saying: this table exists, we did not build it, and
+# everything we DO build starts here.
+#
+# Three concrete payoffs for writing this file:
+#
+#   1. NO HARD-CODED PATHS. Models write source('home_credit', 'bureau')
+#      instead of `home-credit-risk-grup3.home_credit_risk_grup3.bureau`.
+#      If the dataset is ever renamed, you change two lines here -- not fifty
+#      lines scattered across every model.
+#
+#   2. LINEAGE. dbt now knows these tables are the roots of the graph. Run
+#      `dbt docs generate` and you get a clickable map of what feeds what.
+#
+#   3. TESTS ON RAW DATA. You can catch a broken upstream load BEFORE it
+#      poisons twenty downstream models. This is the cheapest bug you will ever
+#      fix.
+#
+# -----------------------------------------------------------------------------
+# !! IMPORTANT -- READ BEFORE RUNNING !!
+# dbt refuses to start if the same source is declared twice. If you already
+# have a `schema.yml` or `_home_credit__sources.yml` containing a `sources:`
+# block for `home_credit`, DELETE that block (or that file) before using this
+# one. The error you would otherwise see is:
+#     Compilation Error: dbt found two sources with the name "home_credit"
+#
+# -----------------------------------------------------------------------------
+# EVERY ROW COUNT AND KEY BELOW WAS MEASURED, NOT ASSUMED.
+# Uniqueness was verified with COUNT(*) vs COUNT(DISTINCT key) on the live
+# tables. Where no unique key exists, this file says so instead of inventing one.
+# =============================================================================
+
+sources:
+
+  - name: home_credit
+    description: >
+      Raw Home Credit Default Risk tables loaded into BigQuery exactly as they
+      arrived from the original CSV files. Nothing here has been cleaned,
+      renamed or validated. Treat every column as suspect until a staging model
+      has vouched for it. Total: 9 tables, roughly 58.5 million rows.
+
+    # 'database' is the GCP project ID. 'schema' is the BigQuery dataset.
+    # BigQuery calls them project/dataset; dbt calls them database/schema.
+    # Same thing, different vocabulary -- a common source of confusion.
+    database: home-credit-risk-grup3
+    schema: home_credit_risk_grup3
+
+    tables:
+
+      # =======================================================================
+      # GROUP 1 -- THE APPLICATION TABLES (the centre of the whole dataset)
+      # =======================================================================
+
+      - name: application_train
+        description: >
+          The heart of the project. One row per loan application, WITH the
+          answer attached: the TARGET column says whether that borrower ended
+          up in payment difficulty. Every other table in this dataset exists to
+          explain this one column.
+          GRAIN: one row per SK_ID_CURR. Verified: 307,511 rows, 307,511
+          distinct IDs -- a perfect key.
+        columns:
+          - name: SK_ID_CURR
+            description: Unique identifier of the loan application.
+            tests:
+              - unique
+              - not_null
+          - name: TARGET
+            description: >
+              1 = the client had payment difficulties (late payment beyond a
+              threshold on an early instalment). 0 = everyone else.
+              Expect heavy class imbalance -- roughly 8% positives. Any model
+              that predicts "0" for everybody scores 92% accuracy and is
+              completely worthless, which is why accuracy is the wrong metric
+              here.
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [0, 1]
+                    quote: false
+
+      - name: application_test
+        description: >
+          Same shape as application_train but WITHOUT the TARGET column. This is
+          the Kaggle competition hold-out set: you predict, you submit, the
+          organiser grades you.
+          GRAIN: one row per SK_ID_CURR. Verified: 48,744 rows, 48,744 distinct.
+          NOTE: this is competition scaffolding, not business data. Do not mix
+          it into training features by accident -- that is how leakage happens.
+        columns:
+          - name: SK_ID_CURR
+            tests:
+              - unique
+              - not_null
+
+      # =======================================================================
+      # GROUP 2 -- EXTERNAL CREDIT BUREAU HISTORY (already modelled)
+      # =======================================================================
+
+      - name: bureau
+        description: >
+          Credits that an EXTERNAL credit bureau holds on record for our
+          applicants -- loans taken from other institutions.
+          GRAIN: one row per SK_ID_BUREAU. Verified: 1,716,428 rows, 1,716,428
+          distinct IDs. Covers 305,811 of our 307,511 applicants, so ~1,700
+          people have no bureau record at all.
+        columns:
+          - name: SK_ID_BUREAU
+            description: Unique identifier of the bureau-reported credit.
+            tests:
+              - unique
+              - not_null
+          - name: SK_ID_CURR
+            description: >
+              Links back to application_train/test. Deliberately NOT unique --
+              one applicant averages 5.6 bureau credits.
+            tests:
+              - not_null
+          - name: CREDIT_ACTIVE
+            description: >
+              Measured distribution: Closed 1,079,273 / Active 630,607 /
+              Sold 6,527 / Bad debt 21.
+          - name: CREDIT_CURRENCY
+            description: >
+              99.9% is 'currency 1'. 1,408 rows sit in currency 2/3/4 and the
+              dataset contains NO exchange rates anywhere. Money columns are
+              therefore not comparable across currencies.
+
+      - name: bureau_balance
+        description: >
+          Monthly status snapshots of the bureau credits. The largest table in
+          the project.
+          GRAIN: one row per SK_ID_BUREAU per month. 27,299,925 rows covering
+          817,395 distinct loans -- meaning only ~48% of the loans in `bureau`
+          have any monthly history at all.
+        columns:
+          - name: SK_ID_BUREAU
+            description: >
+              Foreign key to bureau. DELIBERATELY UNTESTED for referential
+              integrity: 43,041 distinct values here have no parent row in
+              `bureau`. A `relationships` test would fail by design, and a test
+              that always fails is worse than no test -- it teaches the team to
+              ignore red output.
+            tests:
+              - not_null
+          - name: STATUS
+            description: >
+              OVERLOADED COLUMN. '0'-'5' form an ordered delinquency scale while
+              'C' (closed) and 'X' (unknown) are not points on that scale at all.
+              Measured: C 49.99%, 0 27.47%, X 21.28%, 1-5 together 1.26%.
+              Split into three separate columns in stg_bureau_balance.
+
+      # =======================================================================
+      # GROUP 3 -- OUR OWN PRIOR LENDING HISTORY
+      # =======================================================================
+
+      - name: previous_application
+        description: >
+          Applications these same clients made to Home Credit BEFORE the one we
+          are judging. Unlike the bureau tables, this is our own data -- richer
+          and more trustworthy.
+          GRAIN: one row per SK_ID_PREV. Verified: 1,670,214 rows, 1,670,214
+          distinct IDs -- a perfect key.
+        columns:
+          - name: SK_ID_PREV
+            description: Unique identifier of the previous application.
+            tests:
+              - unique
+              - not_null
+          - name: SK_ID_CURR
+            description: The client, linking back to application_train/test.
+            tests:
+              - not_null
+
+      - name: POS_CASH_balance
+        description: >
+          Monthly snapshots of point-of-sale and cash loans.
+          GRAIN: one row per SK_ID_PREV per month. Verified: 10,001,358 rows and
+          10,001,358 distinct (SK_ID_PREV, MONTHS_BALANCE) pairs.
+          NOTE THE CAPITAL LETTERS in the table name. BigQuery table names are
+          CASE-SENSITIVE: `pos_cash_balance` will not resolve. This single
+          detail causes more wasted debugging time than it has any right to.
+        columns:
+          - name: SK_ID_PREV
+            tests:
+              - not_null
+          - name: SK_ID_CURR
+            tests:
+              - not_null
+          - name: MONTHS_BALANCE
+            tests:
+              - not_null
+
+      # =======================================================================
+      # GROUP 4 -- NOT ACTUALLY DATA
+      # These two are declared for completeness and clearly labelled, so that
+      # nobody spends an afternoon trying to join them to something.
+      # =======================================================================
+
+      - name: HomeCredit_columns_description
+        description: >
+          The official data dictionary: one row per column of the real tables,
+          with the vendor's own explanation of what it means. 220 rows.
+          !! TWO LOADING DEFECTS, both worth understanding !!
+          (a) The CSV was loaded WITHOUT its header, so the columns arrived as
+              int64_field_0, string_field_1 ... string_field_4. Their real names
+              are: (index), Table, Row, Description, Special.
+          (b) The header row was ingested AS DATA and now sits as row 1,
+              containing the literal strings "Table", "Row", "Description".
+              So there are 219 real records, not 220.
+          Both are symptoms of a missing `skip_leading_rows=1` at load time.
+          Fixable by re-loading, or by filtering the header row in a staging
+          model.
+
+      - name: sample_submission
+        description: >
+          Kaggle submission template -- 48,744 rows of SK_ID_CURR paired with a
+          placeholder probability. Contains NO information about anybody. It
+          exists purely to show the required file format for the competition.
+          Declared here only so its presence in the dataset is explained rather
+          than mysterious. Do not model it.
+
+  # ==========================================================
+  # Source declared by the application_train work stream.
+  # Same physical dataset, different source alias -- kept as-is
+  # because stg_application_train* models reference this name.
+  # ==========================================================
+  - name: home_credit_raw
+    database: home-credit-risk-grup3
+    schema: home_credit_risk_grup3
+    tables:
+      - name: application_train
+      - name: HomeCredit_columns_description

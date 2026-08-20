@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: home_credit
+    database: home-credit-risk-grup3
+    schema: home_credit_risk_grup3
+
+    tables:
+      - name: installments_payments
+      - name: credit_card_balance
