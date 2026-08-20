@@ -7,6 +7,16 @@ Kaynak: stg_installments_payments
 Hedef: Müşteri bazında (SK_ID_CURR) taksit ödeme disiplini ve risk KPI'ları üretmek.
 ===============================================================================
 */
+/* Enis Bayrak */
+
+/*
+===============================================================================
+Model: int_installments_payment_kpis
+Kaynak: stg_installments_payments
+Hedef: Müşteri bazında (customer_id) taksit ödeme disiplini ve risk KPI'ları üretmek.
+===============================================================================
+*/
+
 {{
     config(
         materialized='view'
@@ -15,7 +25,7 @@ Hedef: Müşteri bazında (SK_ID_CURR) taksit ödeme disiplini ve risk KPI'ları
 
 WITH base_installments AS (
     SELECT
-        SK_ID_CURR,
+        CAST(SK_ID_CURR AS STRING) AS customer_id,
         SK_ID_PREV,
         DAYS_INSTALMENT,
         DAYS_ENTRY_PAYMENT,
@@ -32,7 +42,7 @@ WITH base_installments AS (
 
 aggregated AS (
     SELECT
-        SK_ID_CURR,
+        customer_id,
         
         -- 1. Ortalama ve Maksimum Gecikme Gün Sayısı
         AVG(delay_days) AS avg_payment_delay_days,
@@ -50,10 +60,13 @@ aggregated AS (
         -- 5. Son 180 Günlük Trend (Son 6 aydaki ortalama gecikme - Tüm zamanlar ortalaması)
         COALESCE(
             AVG(CASE WHEN DAYS_INSTALMENT >= -180 THEN delay_days END), 0
-        ) - AVG(delay_days) AS recent_payment_delay_trend
+        ) - AVG(delay_days) AS recent_payment_delay_trend,
+
+        -- 6. Toplam Taksit Sayısı (Marts modeliyle tam uyum için)
+        COUNT(*) AS total_installment_count
 
     FROM base_installments
-    GROUP BY SK_ID_CURR
+    GROUP BY customer_id
 )
 
 SELECT * FROM aggregated
