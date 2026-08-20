@@ -1,9 +1,4 @@
-# =============================================================================
-# dbt_project.yml -- the project's identity card
-# Renamed from the scaffold's 'my_new_project' to the real project name.
-# NOTE: the 'models:' block below MUST use this same name as its top key,
-# otherwise the folder-level materialization settings silently do nothing.
-# =============================================================================
+
 name: 'home_credit_dbt'
 version: '1.0.0'
 config-version: 2
@@ -24,10 +19,7 @@ clean-targets:
 
 models:
   home_credit_dbt:
-    # Layer-level materialization defaults. Individual models can still
-    # override with {{ config(...) }} -- and ours do, deliberately:
-    # staging = view (thin, cheap), intermediate/marts = table (expensive
-    # aggregations written down once instead of re-billed on every query).
+    
     staging:
       +materialized: view
     intermediate:
