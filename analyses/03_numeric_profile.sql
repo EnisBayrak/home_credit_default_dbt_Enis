@@ -1,19 +1,4 @@
--- =============================================================================
--- 03 -- NUMERIC PROFILE: DISTRIBUTION, NEGATIVES, OUTLIERS
--- -----------------------------------------------------------------------------
--- MIN AND MAX ARE NOT ENOUGH. They describe the frame of the picture, not the
--- picture. A column running 0 to 585,000,000 sounds alarming until you learn
--- the median is 125,550 and the 99th percentile is 3,633,750 -- at which point
--- you know the truth: the data is normal and ONE row is absurd.
---
--- ANALOGY: reporting min and max salary in a company tells you the intern earns
--- the least and the CEO the most. Percentiles tell you what everybody else
--- actually earns.
---
--- The query below produces ONE ROW PER COLUMN, which is far easier to scan than
--- one very wide row. The pattern repeats identically for each column -- read
--- the first block carefully and the other eleven are the same shape.
--- =============================================================================
+
 
 with src as (
   select * from `home-credit-risk-grup3.home_credit_risk_grup3.bureau`
@@ -21,16 +6,7 @@ with src as (
 
 profile as (
 
-  -- ---------------------------------------------------------------------------
-  -- BLOCK PATTERN (read this one, the rest are identical):
-  --   column_name  : a text label so you know which row is which
-  --   null_count   : how many values are absent
-  --   zero_count   : zero-inflation -- present but possibly meaningless
-  --   negative_cnt : impossible values for amounts; legitimate for day offsets
-  --   p01 .. p99   : APPROX_QUANTILES(col, 100) splits the data into 100 slices;
-  --                  [OFFSET(n)] picks the n-th cut point. OFFSET counts from 0,
-  --                  so OFFSET(50) is the median.
-  -- ---------------------------------------------------------------------------
+  
   select 'AMT_CREDIT_SUM' as column_name,
          countif(AMT_CREDIT_SUM is null)                              as null_count,
          countif(AMT_CREDIT_SUM = 0)                                  as zero_count,
@@ -104,10 +80,7 @@ profile as (
          max(AMT_ANNUITY)
   from src
 
-  -- NOTE ON THE DAY COLUMNS BELOW: negative values here are NORMAL, not errors.
-  -- The source encodes time as "days before the application date". A negative
-  -- count in `negative_count` for these columns is expected and healthy.
-  -- Context decides whether a negative number is a bug -- never the sign alone.
+  
   union all
   select 'DAYS_CREDIT',
          countif(DAYS_CREDIT is null), countif(DAYS_CREDIT = 0),
@@ -183,10 +156,7 @@ profile as (
 
 select
   *,
-  -- OUTLIER SEVERITY RATIO: how many times bigger is the maximum than the
-  -- 99th percentile? A ratio near 1 means a smooth tail. A ratio of 100+ means
-  -- one or two rows are living in a different universe and will dominate any
-  -- average, any sum, and any model that is not robust to them.
+  
   round(safe_divide(max_value, nullif(p99, 0)), 1) as max_to_p99_ratio
 from profile
 order by max_to_p99_ratio desc nulls last;

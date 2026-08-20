@@ -1,10 +1,5 @@
 # LEARN.md — `bureau` ve `bureau_balance` Temizliği
 
-> Bu dosya bir dokümantasyon değil, bir **anlatı**. Ne yaptığımızı, neden öyle
-> yaptığımızı ve bu işten çıkarılacak dersleri anlatıyor. Altı ay sonra
-> döndüğünüzde kendi kararlarınızı hatırlamanız için yazıldı.
-
----
 
 ## 1. Hikâyenin başladığı yer
 

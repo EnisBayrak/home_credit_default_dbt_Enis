@@ -1,38 +1,5 @@
 version: 2
 
-# =============================================================================
-# sources.yml  --  DECLARING THE RAW DATA
-# -----------------------------------------------------------------------------
-# A "source" is dbt's way of saying: this table exists, we did not build it, and
-# everything we DO build starts here.
-#
-# Three concrete payoffs for writing this file:
-#
-#   1. NO HARD-CODED PATHS. Models write source('home_credit', 'bureau')
-#      instead of `home-credit-risk-grup3.home_credit_risk_grup3.bureau`.
-#      If the dataset is ever renamed, you change two lines here -- not fifty
-#      lines scattered across every model.
-#
-#   2. LINEAGE. dbt now knows these tables are the roots of the graph. Run
-#      `dbt docs generate` and you get a clickable map of what feeds what.
-#
-#   3. TESTS ON RAW DATA. You can catch a broken upstream load BEFORE it
-#      poisons twenty downstream models. This is the cheapest bug you will ever
-#      fix.
-#
-# -----------------------------------------------------------------------------
-# !! IMPORTANT -- READ BEFORE RUNNING !!
-# dbt refuses to start if the same source is declared twice. If you already
-# have a `schema.yml` or `_home_credit__sources.yml` containing a `sources:`
-# block for `home_credit`, DELETE that block (or that file) before using this
-# one. The error you would otherwise see is:
-#     Compilation Error: dbt found two sources with the name "home_credit"
-#
-# -----------------------------------------------------------------------------
-# EVERY ROW COUNT AND KEY BELOW WAS MEASURED, NOT ASSUMED.
-# Uniqueness was verified with COUNT(*) vs COUNT(DISTINCT key) on the live
-# tables. Where no unique key exists, this file says so instead of inventing one.
-# =============================================================================
 
 sources:
 
@@ -43,17 +10,13 @@ sources:
       renamed or validated. Treat every column as suspect until a staging model
       has vouched for it. Total: 9 tables, roughly 58.5 million rows.
 
-    # 'database' is the GCP project ID. 'schema' is the BigQuery dataset.
-    # BigQuery calls them project/dataset; dbt calls them database/schema.
-    # Same thing, different vocabulary -- a common source of confusion.
+    
     database: home-credit-risk-grup3
     schema: home_credit_risk_grup3
 
     tables:
 
-      # =======================================================================
-      # GROUP 1 -- THE APPLICATION TABLES (the centre of the whole dataset)
-      # =======================================================================
+      
 
       - name: application_train
         description: >
@@ -98,9 +61,7 @@ sources:
               - unique
               - not_null
 
-      # =======================================================================
-      # GROUP 2 -- EXTERNAL CREDIT BUREAU HISTORY (already modelled)
-      # =======================================================================
+      
 
       - name: bureau
         description: >
@@ -155,9 +116,7 @@ sources:
               Measured: C 49.99%, 0 27.47%, X 21.28%, 1-5 together 1.26%.
               Split into three separate columns in stg_bureau_balance.
 
-      # =======================================================================
-      # GROUP 3 -- OUR OWN PRIOR LENDING HISTORY
-      # =======================================================================
+      
 
       - name: previous_application
         description: >
@@ -196,12 +155,7 @@ sources:
             tests:
               - not_null
 
-      # =======================================================================
-      # GROUP 4 -- NOT ACTUALLY DATA
-      # These two are declared for completeness and clearly labelled, so that
-      # nobody spends an afternoon trying to join them to something.
-      # =======================================================================
-
+      
       - name: HomeCredit_columns_description
         description: >
           The official data dictionary: one row per column of the real tables,
@@ -225,11 +179,7 @@ sources:
           Declared here only so its presence in the dataset is explained rather
           than mysterious. Do not model it.
 
-  # ==========================================================
-  # Source declared by the application_train work stream.
-  # Same physical dataset, different source alias -- kept as-is
-  # because stg_application_train* models reference this name.
-  # ==========================================================
+  
   - name: home_credit_raw
     database: home-credit-risk-grup3
     schema: home_credit_risk_grup3

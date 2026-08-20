@@ -1,28 +1,4 @@
--- =============================================================================
--- 02 -- COMPLETENESS: NULLs, EMPTY STRINGS AND FAKE NULLs
--- -----------------------------------------------------------------------------
--- Three different kinds of "missing", and only the first one is obvious:
---
---   1. TRUE NULL      -- the database knows the value is absent.
---   2. EMPTY STRING   -- '' or '   '. Looks present, contains nothing. NULL
---                        checks miss it entirely.
---   3. SENTINEL       -- a real-looking value standing in for "unknown":
---                        365243, -1, 9999, 'XNA', 'Unknown', 'N/A'.
---                        This is the dangerous one. It survives every NULL
---                        check, joins successfully, and quietly poisons every
---                        average you compute.
---
--- ANALOGY: a missing person can be (1) reported missing, (2) marked "present"
--- on a form nobody filled in, or (3) replaced by a cardboard cutout. Only the
--- first is easy to notice. The third fools the headcount.
--- =============================================================================
 
-
--- -----------------------------------------------------------------------------
--- 2.1  NULL percentage for every column of bureau
--- Percentages beat raw counts here: "38,092 nulls" means nothing until you know
--- it is out of 1.7 million.
--- -----------------------------------------------------------------------------
 select
   count(*)                                                              as total_rows,
   round(100 * countif(SK_ID_CURR             is null) / count(*), 2)    as pct_null_sk_id_curr,
@@ -45,14 +21,7 @@ select
 from `home-credit-risk-grup3.home_credit_risk_grup3.bureau`;
 
 
--- -----------------------------------------------------------------------------
--- 2.2  EMPTY AND WHITESPACE-ONLY STRINGS in the text columns
--- TRIM() strips leading and trailing spaces. If a value becomes '' after
--- trimming, it was nothing but whitespace -- present to the database, useless
--- to you.
--- We also count values that CHANGE when trimmed: those have hidden padding,
--- which silently breaks GROUP BY ('Active' and 'Active ' become two groups).
--- -----------------------------------------------------------------------------
+
 select
   countif(CREDIT_ACTIVE   = '')                             as empty_credit_active,
   countif(trim(CREDIT_ACTIVE)   = '')                       as blank_credit_active,
@@ -64,16 +33,7 @@ select
 from `home-credit-risk-grup3.home_credit_risk_grup3.bureau`;
 
 
--- -----------------------------------------------------------------------------
--- 2.3  SENTINEL HUNT -- fake values pretending to be data
--- 365243 is a documented placeholder in this dataset family (it appears in
--- previous_application). It means "not applicable / infinity" but arrives as an
--- ordinary integer. Averaging a column containing it produces nonsense.
---
--- We check every plausible sentinel in every numeric column. A zero result is
--- a real finding: it means the column is clean, and you can say so with
--- evidence rather than hope.
--- -----------------------------------------------------------------------------
+
 select
   countif(DAYS_CREDIT            = 365243)                  as s_365243_days_credit,
   countif(DAYS_CREDIT_ENDDATE    = 365243)                  as s_365243_enddate,
@@ -91,9 +51,7 @@ select
 from `home-credit-risk-grup3.home_credit_risk_grup3.bureau`;
 
 
--- -----------------------------------------------------------------------------
--- 2.4  Same checks for bureau_balance (only 3 columns, so it is short)
--- -----------------------------------------------------------------------------
+
 select
   count(*)                                                          as total_rows,
   countif(SK_ID_BUREAU   is null)                                   as null_loan_id,
@@ -101,6 +59,6 @@ select
   countif(STATUS         is null)                                   as null_status,
   countif(STATUS = '')                                              as empty_status,
   countif(STATUS != trim(STATUS))                                   as padded_status,
-  -- STATUS should only ever be one character. Anything longer is corruption.
+  
   countif(length(STATUS) != 1)                                      as status_wrong_length
 from `home-credit-risk-grup3.home_credit_risk_grup3.bureau_balance`;
